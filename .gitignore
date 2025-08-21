@@ -1,0 +1,16 @@
+# Build output
+.next/
+out/
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+
+# Local data and OS files
+.data/
+.DS_Store
+
+# Large local assets not needed in repo
+Pasted image.png

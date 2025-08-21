@@ -1,0 +1,87 @@
+// Prisma schema for Postgres (Vercel/Neon)
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  travelers Traveler[]
+  bookings  Booking[]
+}
+
+model Traveler {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName  String
+  lastName   String
+  gender     String?
+  dob        DateTime?
+  docType    String?
+  docNumber  String?
+  docExpiry  DateTime?
+
+  @@index([userId])
+}
+
+model Booking {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider     String   // mock|duffel
+  providerRef  String   // order id or simulated id
+  status       String   // RESERVED|CONFIRMED|CANCELLED
+  totalAmount  Int      // cents (prototype)
+  currency     String   // e.g., "INR"
+  offerId      String
+  passengers   Json
+  contact      Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  segments     Segment[]
+
+  @@unique([provider, providerRef])
+  @@index([userId, createdAt])
+}
+
+model Segment {
+  id          String   @id @default(cuid())
+  bookingId   String
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  origin      String
+  destination String
+  departAt    DateTime
+  arriveAt    DateTime
+  carrier     String
+  number      String
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  kind      String   // TOOL_CALL|BOOK|CANCEL|ERROR
+  payload   Json
+  createdAt DateTime @default(now())
+}
+
+model IdempotencyKey {
+  id        String   @id @default(cuid())
+  userId    String?
+  method    String
+  path      String
+  key       String
+  hash      String   @unique  // hash(userId,method,path,key)
+  createdAt DateTime @default(now())
+  expiresAt DateTime?
+}
+
