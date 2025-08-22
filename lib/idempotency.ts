@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { Prisma } from '@prisma/client';
 import { db } from './prisma';
 
 function hashKey(userId: string | null, method: string, path: string, key: string) {
@@ -14,6 +15,8 @@ export async function withIdempotency<T>(
   key: string,
   fn: () => Promise<T>
 ): Promise<{ reused: boolean; result: T }> {
+  // purge expired keys (>24h old)
+  await db.idempotencyKey.deleteMany({ where: { expiresAt: { lt: new Date() } } });
   if (!key) {
     // No key provided — just run once (prototype behavior)
     const result = await fn();
@@ -22,11 +25,20 @@ export async function withIdempotency<T>(
   const hash = hashKey(userId, method, path, key);
   const existing = await db.idempotencyKey.findUnique({ where: { hash } });
   if (existing) {
-    // We don't persist result bodies in prototype; caller should be idempotent.
-    throw new Error('Duplicate request (idempotent key reused)');
+    return { reused: true, result: existing.response as T };
   }
   const result = await fn();
-  await db.idempotencyKey.create({ data: { userId: userId ?? null, method, path, key, hash } });
+  await db.idempotencyKey.create({
+    data: {
+      userId: userId ?? null,
+      method,
+      path,
+      key,
+      hash,
+      response: result as unknown as Prisma.JsonValue,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+  });
   return { reused: false, result };
 }
 
