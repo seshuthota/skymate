@@ -16,18 +16,16 @@ export async function POST(req: Request) {
     const userId = await requireUser(req);
     const args = Schema.parse(await req.json());
     const idem = req.headers.get('Idempotency-Key') || '';
-    const { result } = await withIdempotency(userId, 'POST', '/api/bookings', idem, () =>
+    const { reused, result } = await withIdempotency(userId, 'POST', '/api/bookings', idem, () =>
       bookings.create(userId, args as any)
     );
     return new Response(
       JSON.stringify({ bookingId: result.id, status: result.status, providerRef: result.providerRef }),
-      { status: 201 }
+      { status: reused ? 200 : 201 }
     );
   } catch (err: any) {
     const message = err?.message || 'Error creating booking';
-    const code = message.includes('idempotent') ? 'IDEMPOTENT_REPLAY' : 'CREATE_FAILED';
-    const status = code === 'IDEMPOTENT_REPLAY' ? 409 : 400;
-    return new Response(JSON.stringify({ code, message }), { status });
+    return new Response(JSON.stringify({ code: 'CREATE_FAILED', message }), { status: 400 });
   }
 }
 

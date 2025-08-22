@@ -81,6 +81,7 @@ model IdempotencyKey {
   path      String
   key       String
   hash      String   @unique  // hash(userId,method,path,key)
+  response  Json
   createdAt DateTime @default(now())
   expiresAt DateTime?
 }
