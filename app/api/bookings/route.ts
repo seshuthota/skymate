@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { bookings } from '@/lib/bookings';
 import { requireUser } from '@/lib/auth';
 import { withIdempotency } from '@/lib/idempotency';
+import { ListBookingsSchema } from '@/lib/schemas';
 
 const Schema = z.object({
   offerId: z.string(),
@@ -35,9 +36,13 @@ export async function GET(req: Request) {
   try {
     const userId = await requireUser(req);
     const url = new URL(req.url);
-    const status = url.searchParams.get('status') ?? undefined;
-    const cursor = url.searchParams.get('cursor') ?? undefined;
-    const data = await bookings.list(userId, status || undefined, cursor || undefined);
+    const params = Object.fromEntries(url.searchParams);
+    const parsed = ListBookingsSchema.safeParse(params);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ code: 'INVALID_REQUEST', issues: parsed.error.issues }), { status: 400 });
+    }
+    const { status, cursor } = parsed.data;
+    const data = await bookings.list(userId, status, cursor);
     return Response.json(data);
   } catch (err: any) {
     return new Response(JSON.stringify({ code: 'LIST_FAILED', message: err?.message || 'Error' }), { status: 400 });
