@@ -1,3 +1,5 @@
+import type { Contact, Passenger } from './types';
+
 export interface SearchParams {
   origin: string;
   destination: string;
@@ -20,8 +22,8 @@ export interface ProviderOffer {
 
 export interface BookingInput {
   offerId: string;
-  contact: any;
-  passengers: any[];
+  contact: Contact;
+  passengers: Passenger[];
 }
 
 export interface BookingResult {

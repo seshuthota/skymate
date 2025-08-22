@@ -4,11 +4,12 @@ import { z } from 'zod';
 import { bookings } from '@/lib/bookings';
 import { requireUser } from '@/lib/auth';
 import { withIdempotency } from '@/lib/idempotency';
+import { ContactSchema, PassengerSchema } from '@/lib/flights/types';
 
 const Schema = z.object({
   offerId: z.string(),
-  contact: z.any(),
-  passengers: z.array(z.any()),
+  contact: ContactSchema,
+  passengers: z.array(PassengerSchema),
 });
 
 export async function POST(req: Request) {
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
     const args = Schema.parse(await req.json());
     const idem = req.headers.get('Idempotency-Key') || '';
     const { result } = await withIdempotency(userId, 'POST', '/api/bookings', idem, () =>
-      bookings.create(userId, args as any)
+      bookings.create(userId, args)
     );
     return new Response(
       JSON.stringify({ bookingId: result.id, status: result.status, providerRef: result.providerRef }),

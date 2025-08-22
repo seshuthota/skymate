@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { z } from 'zod';
 import { bookings } from '@/lib/bookings';
 import { requireUser } from '@/lib/auth';
+import { ContactSchema, PassengerSchema } from '@/lib/flights/types';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -15,8 +16,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 }
 
 const PatchSchema = z.object({
-  contact: z.any().optional(),
-  passengers: z.array(z.any()).optional(),
+  contact: ContactSchema.optional(),
+  passengers: z.array(PassengerSchema).optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
@@ -24,7 +25,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const userId = await requireUser(req);
     const body = await req.json();
     const patch = PatchSchema.parse(body);
-    const updated = await bookings.update(userId, params.id, patch as any);
+    const updated = await bookings.update(userId, params.id, patch);
     return Response.json(updated);
   } catch (err: any) {
     return new Response(JSON.stringify({ code: 'UPDATE_FAILED', message: err?.message || 'Error' }), { status: 400 });

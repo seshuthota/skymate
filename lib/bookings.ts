@@ -1,10 +1,12 @@
 import { db } from './prisma';
 import { provider } from './flights';
+import type { Contact, Passenger } from './flights/types';
+import { Prisma } from '@prisma/client';
 
 type CreateArgs = {
   offerId: string;
-  contact: any;
-  passengers: any[];
+  contact: Contact;
+  passengers: Passenger[];
 };
 
 export const bookings = {
@@ -31,8 +33,8 @@ export const bookings = {
           totalAmount: offer.price.amount,
           currency: offer.price.currency,
           offerId: offer.id,
-          passengers: args.passengers as any,
-          contact: args.contact as any,
+          passengers: args.passengers as Prisma.JsonArray,
+          contact: args.contact as Prisma.JsonObject,
         },
       });
       await tx.segment.create({
@@ -63,15 +65,15 @@ export const bookings = {
     return booking;
   },
 
-  async update(userId: string, bookingId: string, patch: { contact?: any; passengers?: any[] }) {
+  async update(userId: string, bookingId: string, patch: { contact?: Contact; passengers?: Passenger[] }) {
     const booking = await db.booking.findFirst({ where: { id: bookingId, userId } });
     if (!booking) throw new Error('Booking not found');
     if (booking.status === 'CANCELLED') throw new Error('Cannot update a cancelled booking');
     return db.booking.update({
       where: { id: booking.id },
       data: {
-        contact: typeof patch.contact !== 'undefined' ? (patch.contact as any) : undefined,
-        passengers: typeof patch.passengers !== 'undefined' ? (patch.passengers as any) : undefined,
+        contact: typeof patch.contact !== 'undefined' ? (patch.contact as Prisma.JsonObject) : undefined,
+        passengers: typeof patch.passengers !== 'undefined' ? (patch.passengers as Prisma.JsonArray) : undefined,
       },
       include: { segments: true },
     });
